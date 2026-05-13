@@ -297,7 +297,7 @@
 
       try {
         const qrUrl = new URL(decodedText);
-        if (qrUrl.hostname !== ALLOWED_HOST || !qrUrl.pathname.includes('autocross-verificar')) {
+        if (qrUrl.hostname !== ALLOWED_HOST || qrUrl.pathname !== '/webhook/autocross-verificar') {
           showResult('invalid', 'QR NO VALIDO', 'Este QR no es una entrada de Autocross', {});
           return;
         }
