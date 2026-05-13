@@ -211,21 +211,68 @@
     <div class="message message--success" id="msgSuccess"></div>
     <div class="message message--error" id="msgError">Error al procesar. Intenta de nuevo.</div>
 
+    <div style="position:relative;margin:28px 0 24px;text-align:center">
+      <hr class="panel__divider" style="margin:0">
+      <span style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:#2a2a2a;padding:0 12px;font-size:0.7rem;color:#777;text-transform:uppercase;letter-spacing:1px;white-space:nowrap">Entradas de cortesia</span>
+    </div>
+
+    <form id="courtesyForm">
+      <div class="form-group">
+        <label class="form-group__label" for="correoCourtesy">Correo del invitado</label>
+        <input
+          class="form-group__input"
+          type="email"
+          id="correoCourtesy"
+          name="correo"
+          placeholder="invitado@ejemplo.com"
+          required
+        >
+      </div>
+
+      <div class="form-group">
+        <label class="form-group__label" for="cantidadCourtesy">Cantidad de entradas</label>
+        <input
+          class="form-group__input"
+          type="number"
+          id="cantidadCourtesy"
+          name="cantidad"
+          min="1"
+          max="10"
+          value="1"
+          required
+        >
+      </div>
+
+      <button class="btn-submit" type="submit" id="btnCourtesy" style="background:#e67e22">Enviar cortesia</button>
+    </form>
+
+    <div class="message message--success" id="msgCourtesySuccess"></div>
+    <div class="message message--error" id="msgCourtesyError">Error al enviar cortesia. Intenta de nuevo.</div>
+
     <p class="panel__footer">Autocross en Accion CR &mdash; Sistema de entradas</p>
     <p class="panel__footer" style="margin-top:8px"><a href="https://thinkler.ai" target="_blank" style="font-size:inherit;text-decoration:none;letter-spacing:0.5px;color:#888">Powered by <span style="color:#1e566f;font-weight:bold">Think</span><span style="color:#41a2a8;font-weight:bold">ler</span><span style="color:#41a2a8">.ai</span></a></p>
   </div>
 
   <script>
     const WEBHOOK_URL = "https://n8n-n8n.heyett.easypanel.host/webhook/autocross-confirmacion";
+    const COURTESY_URL = "https://n8n-n8n.heyett.easypanel.host/webhook/autocross-cortesia";
+    const AUTH_KEY = "-VgakyEBGTS4ltW8I517TCWLSSMlcpPhQTmwEMD7alE";
 
     const form = document.getElementById("confirmForm");
     const btnSubmit = document.getElementById("btnSubmit");
     const msgSuccess = document.getElementById("msgSuccess");
     const msgError = document.getElementById("msgError");
 
+    const courtesyForm = document.getElementById("courtesyForm");
+    const btnCourtesy = document.getElementById("btnCourtesy");
+    const msgCourtesySuccess = document.getElementById("msgCourtesySuccess");
+    const msgCourtesyError = document.getElementById("msgCourtesyError");
+
     function hideMessages() {
       msgSuccess.classList.remove("message--visible");
       msgError.classList.remove("message--visible");
+      msgCourtesySuccess.classList.remove("message--visible");
+      msgCourtesyError.classList.remove("message--visible");
     }
 
     form.addEventListener("submit", async (e) => {
@@ -245,7 +292,7 @@
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "X-Auth-Key": "-VgakyEBGTS4ltW8I517TCWLSSMlcpPhQTmwEMD7alE"
+            "X-Auth-Key": AUTH_KEY
           },
           body: JSON.stringify({
             correo_comprador: correo,
@@ -267,6 +314,43 @@
       } finally {
         btnSubmit.disabled = false;
         btnSubmit.textContent = "Enviar";
+      }
+    });
+
+    courtesyForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      hideMessages();
+
+      const correo = document.getElementById("correoCourtesy").value.trim();
+      const cantidad = document.getElementById("cantidadCourtesy").value;
+
+      if (!correo || !cantidad) return;
+
+      btnCourtesy.disabled = true;
+      btnCourtesy.textContent = "Enviando...";
+
+      try {
+        const res = await fetch(COURTESY_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Auth-Key": AUTH_KEY
+          },
+          body: JSON.stringify({ correo, cantidad })
+        });
+
+        if (res.ok) {
+          msgCourtesySuccess.textContent = "Entrada de cortesia enviada al correo indicado.";
+          msgCourtesySuccess.classList.add("message--visible");
+          courtesyForm.reset();
+        } else {
+          throw new Error("Response not ok");
+        }
+      } catch (err) {
+        msgCourtesyError.classList.add("message--visible");
+      } finally {
+        btnCourtesy.disabled = false;
+        btnCourtesy.textContent = "Enviar cortesia";
       }
     });
   </script>
