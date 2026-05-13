@@ -199,7 +199,7 @@
 <body>
   <div class="header">
     <img src="logo-negro.png" alt="Autocross" class="header__logo">
-    <p class="header__title">Escaner de entradas — 17 mayo 2025</p>
+    <p class="header__title">Escaner de entradas — 17 mayo 2026</p>
   </div>
 
   <div class="scanner">
@@ -239,11 +239,12 @@
   <script>
     let html5QrCode = null;
     let isScanning = false;
+    let isProcessing = false;
     let lastScannedCode = '';
     let lastScanTime = 0;
     let stats = { valid: 0, invalid: 0, total: 0 };
 
-    const COOLDOWN_MS = 3000;
+    const COOLDOWN_MS = 5000;
     const ALLOWED_HOST = 'n8n-n8n.heyett.easypanel.host';
 
     function escapeText(str) {
@@ -286,12 +287,15 @@
     }
 
     async function onScanSuccess(decodedText) {
+      if (isProcessing) return;
+
       const now = Date.now();
 
       if (decodedText === lastScannedCode && (now - lastScanTime) < COOLDOWN_MS) {
         return;
       }
 
+      isProcessing = true;
       lastScannedCode = decodedText;
       lastScanTime = now;
 
@@ -341,6 +345,8 @@
 
       } catch (err) {
         showResult('invalid', 'ERROR', 'No se pudo verificar la entrada', {});
+      } finally {
+        setTimeout(() => { isProcessing = false; }, COOLDOWN_MS);
       }
 
       document.getElementById('status').textContent = 'Apunta la camara al siguiente QR';
