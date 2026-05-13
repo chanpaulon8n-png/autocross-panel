@@ -243,7 +243,10 @@
       try {
         const res = await fetch(WEBHOOK_URL, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "X-Auth-Key": "-VgakyEBGTS4ltW8I517TCWLSSMlcpPhQTmwEMD7alE"
+          },
           body: JSON.stringify({
             correo_comprador: correo,
             accion: accion

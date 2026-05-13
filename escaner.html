@@ -244,6 +244,13 @@
     let stats = { valid: 0, invalid: 0, total: 0 };
 
     const COOLDOWN_MS = 3000;
+    const ALLOWED_HOST = 'n8n-n8n.heyett.easypanel.host';
+
+    function escapeText(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
 
     function startScanner() {
       const videoContainer = document.getElementById('videoContainer');
@@ -288,7 +295,13 @@
       lastScannedCode = decodedText;
       lastScanTime = now;
 
-      if (!decodedText.includes('autocross-verificar')) {
+      try {
+        const qrUrl = new URL(decodedText);
+        if (qrUrl.hostname !== ALLOWED_HOST || !qrUrl.pathname.includes('autocross-verificar')) {
+          showResult('invalid', 'QR NO VALIDO', 'Este QR no es una entrada de Autocross', {});
+          return;
+        }
+      } catch {
         showResult('invalid', 'QR NO VALIDO', 'Este QR no es una entrada de Autocross', {});
         return;
       }
@@ -347,22 +360,36 @@
       document.getElementById('countInvalid').textContent = stats.invalid;
       document.getElementById('countTotal').textContent = stats.total;
 
-      let detailsHtml = '';
+      box.className = `result ${cssClass}`;
+      box.textContent = '';
+
+      const iconEl = document.createElement('div');
+      iconEl.className = 'result__icon';
+      iconEl.style.color = iconColor;
+      iconEl.innerHTML = icon;
+      box.appendChild(iconEl);
+
+      const titleEl = document.createElement('div');
+      titleEl.className = 'result__title';
+      titleEl.style.color = iconColor;
+      titleEl.textContent = title;
+      box.appendChild(titleEl);
+
+      const msgEl = document.createElement('div');
+      msgEl.className = 'result__msg';
+      msgEl.textContent = msg;
+      box.appendChild(msgEl);
+
       if (data.nombre) {
-        detailsHtml = `<div class="result__details">
-          <p><strong>Nombre:</strong> ${data.nombre}</p>
-          <p><strong>ID:</strong> ${data.entradaId}</p>
-          <p><strong>Entradas:</strong> ${data.cantidad}</p>
-        </div>`;
+        const details = document.createElement('div');
+        details.className = 'result__details';
+        details.innerHTML =
+          '<p><strong>Nombre:</strong> ' + escapeText(data.nombre) + '</p>' +
+          '<p><strong>ID:</strong> ' + escapeText(data.entradaId) + '</p>' +
+          '<p><strong>Entradas:</strong> ' + escapeText(data.cantidad) + '</p>';
+        box.appendChild(details);
       }
 
-      box.className = `result ${cssClass}`;
-      box.innerHTML = `
-        <div class="result__icon" style="color:${iconColor}">${icon}</div>
-        <div class="result__title" style="color:${iconColor}">${title}</div>
-        <div class="result__msg">${msg}</div>
-        ${detailsHtml}
-      `;
       box.style.display = 'block';
 
       if (type === 'valid') {
