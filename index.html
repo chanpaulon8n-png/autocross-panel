@@ -213,6 +213,33 @@
 
     <div style="position:relative;margin:28px 0 24px;text-align:center">
       <hr class="panel__divider" style="margin:0">
+      <span style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:#2a2a2a;padding:0 12px;font-size:0.7rem;color:#777;text-transform:uppercase;letter-spacing:1px;white-space:nowrap">Enviar entradas</span>
+    </div>
+
+    <form id="sendForm">
+      <div class="form-group">
+        <label class="form-group__label" for="correoSend">Correo del comprador</label>
+        <input class="form-group__input" type="email" id="correoSend" name="correo" placeholder="comprador@ejemplo.com" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-group__label" for="nombreSend">Nombre</label>
+        <input class="form-group__input" type="text" id="nombreSend" name="nombre" placeholder="Nombre completo" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-group__label" for="cantidadSend">Cantidad de entradas</label>
+        <input class="form-group__input" type="number" id="cantidadSend" name="cantidad" min="1" max="10" value="1" required>
+      </div>
+
+      <button class="btn-submit" type="submit" id="btnSend" style="background:#2ecc71">Enviar entradas</button>
+    </form>
+
+    <div class="message message--success" id="msgSendSuccess"></div>
+    <div class="message message--error" id="msgSendError">Error al enviar entradas. Intenta de nuevo.</div>
+
+    <div style="position:relative;margin:28px 0 24px;text-align:center">
+      <hr class="panel__divider" style="margin:0">
       <span style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:#2a2a2a;padding:0 12px;font-size:0.7rem;color:#777;text-transform:uppercase;letter-spacing:1px;white-space:nowrap">Entradas de cortesia</span>
     </div>
 
@@ -256,12 +283,18 @@
   <script>
     const WEBHOOK_URL = "https://n8n-n8n.heyett.easypanel.host/webhook/autocross-confirmacion";
     const COURTESY_URL = "https://n8n-n8n.heyett.easypanel.host/webhook/autocross-cortesia";
+    const SEND_URL = "https://n8n-n8n.heyett.easypanel.host/webhook/autocross-enviar-entrada";
     const AUTH_KEY = "-VgakyEBGTS4ltW8I517TCWLSSMlcpPhQTmwEMD7alE";
 
     const form = document.getElementById("confirmForm");
     const btnSubmit = document.getElementById("btnSubmit");
     const msgSuccess = document.getElementById("msgSuccess");
     const msgError = document.getElementById("msgError");
+
+    const sendForm = document.getElementById("sendForm");
+    const btnSend = document.getElementById("btnSend");
+    const msgSendSuccess = document.getElementById("msgSendSuccess");
+    const msgSendError = document.getElementById("msgSendError");
 
     const courtesyForm = document.getElementById("courtesyForm");
     const btnCourtesy = document.getElementById("btnCourtesy");
@@ -271,6 +304,8 @@
     function hideMessages() {
       msgSuccess.classList.remove("message--visible");
       msgError.classList.remove("message--visible");
+      msgSendSuccess.classList.remove("message--visible");
+      msgSendError.classList.remove("message--visible");
       msgCourtesySuccess.classList.remove("message--visible");
       msgCourtesyError.classList.remove("message--visible");
     }
@@ -314,6 +349,44 @@
       } finally {
         btnSubmit.disabled = false;
         btnSubmit.textContent = "Enviar";
+      }
+    });
+
+    sendForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      hideMessages();
+
+      const correo = document.getElementById("correoSend").value.trim();
+      const nombre = document.getElementById("nombreSend").value.trim();
+      const cantidad = document.getElementById("cantidadSend").value;
+
+      if (!correo || !nombre || !cantidad) return;
+
+      btnSend.disabled = true;
+      btnSend.textContent = "Enviando...";
+
+      try {
+        const res = await fetch(SEND_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Auth-Key": AUTH_KEY
+          },
+          body: JSON.stringify({ correo, nombre, cantidad })
+        });
+
+        if (res.ok) {
+          msgSendSuccess.textContent = "Entrada enviada al correo del comprador.";
+          msgSendSuccess.classList.add("message--visible");
+          sendForm.reset();
+        } else {
+          throw new Error("Response not ok");
+        }
+      } catch (err) {
+        msgSendError.classList.add("message--visible");
+      } finally {
+        btnSend.disabled = false;
+        btnSend.textContent = "Enviar entradas";
       }
     });
 
