@@ -293,18 +293,8 @@
       </div>
 
       <div class="form-group">
-        <label class="form-group__label" for="precioEntrada">Precio por entrada (colones)</label>
-        <input class="form-group__input" type="number" id="precioEntrada" name="precio_entrada" min="0" value="5000" required>
-      </div>
-
-      <div class="form-group">
         <label class="form-group__label" for="cantParqueos">Cantidad de parqueos</label>
         <input class="form-group__input" type="number" id="cantParqueos" name="cant_parqueos" min="0" max="20" value="0">
-      </div>
-
-      <div class="form-group">
-        <label class="form-group__label" for="precioParqueo">Precio por parqueo (colones)</label>
-        <input class="form-group__input" type="number" id="precioParqueo" name="precio_parqueo" min="0" value="2000">
       </div>
 
       <div style="background:#333;border-radius:8px;padding:14px;margin-bottom:20px;text-align:center">
@@ -440,19 +430,18 @@
       }
     });
 
+    const PRECIO_ENTRADA = 5000;
+    const PRECIO_PARQUEO = 2000;
+
     function calcularTotal() {
       const ce = parseInt(document.getElementById("cantEntradas").value) || 0;
-      const pe = parseInt(document.getElementById("precioEntrada").value) || 0;
       const cp = parseInt(document.getElementById("cantParqueos").value) || 0;
-      const pp = parseInt(document.getElementById("precioParqueo").value) || 0;
-      const total = (ce * pe) + (cp * pp);
+      const total = (ce * PRECIO_ENTRADA) + (cp * PRECIO_PARQUEO);
       document.getElementById("totalVenta").textContent = "₡" + total.toLocaleString();
     }
 
     document.getElementById("cantEntradas").addEventListener("input", calcularTotal);
-    document.getElementById("precioEntrada").addEventListener("input", calcularTotal);
     document.getElementById("cantParqueos").addEventListener("input", calcularTotal);
-    document.getElementById("precioParqueo").addEventListener("input", calcularTotal);
 
     ventaForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -460,9 +449,7 @@
 
       const nombre = document.getElementById("nombreVenta").value.trim();
       const cant_entradas = document.getElementById("cantEntradas").value;
-      const precio_entrada = document.getElementById("precioEntrada").value;
       const cant_parqueos = document.getElementById("cantParqueos").value;
-      const precio_parqueo = document.getElementById("precioParqueo").value;
 
       if (!nombre || !cant_entradas) return;
 
@@ -476,16 +463,15 @@
             "Content-Type": "application/json",
             "X-Auth-Key": AUTH_KEY
           },
-          body: JSON.stringify({ nombre, cant_entradas, precio_entrada, cant_parqueos, precio_parqueo })
+          body: JSON.stringify({ nombre, cant_entradas, precio_entrada: PRECIO_ENTRADA, cant_parqueos, precio_parqueo: PRECIO_PARQUEO })
         });
 
         if (res.ok) {
-          const total = (cant_entradas * precio_entrada) + (cant_parqueos * precio_parqueo);
+          const total = (cant_entradas * PRECIO_ENTRADA) + (cant_parqueos * PRECIO_PARQUEO);
           msgVentaSuccess.textContent = `Venta registrada: ${cant_entradas} entrada(s)${cant_parqueos > 0 ? ' + ' + cant_parqueos + ' parqueo(s)' : ''} — Total: ₡${total.toLocaleString()}`;
           msgVentaSuccess.classList.add("message--visible");
           ventaForm.reset();
-          document.getElementById("precioEntrada").value = "5000";
-          document.getElementById("precioParqueo").value = "2000";
+          calcularTotal();
         } else {
           throw new Error("Response not ok");
         }
