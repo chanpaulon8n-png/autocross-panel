@@ -307,6 +307,11 @@
         <input class="form-group__input" type="number" id="precioParqueo" name="precio_parqueo" min="0" value="2000">
       </div>
 
+      <div style="background:#333;border-radius:8px;padding:14px;margin-bottom:20px;text-align:center">
+        <span style="color:#aaa;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.5px">Total a cobrar</span>
+        <p id="totalVenta" style="color:#9b59b6;font-size:1.5rem;font-weight:bold;margin:6px 0 0">₡5,000</p>
+      </div>
+
       <button class="btn-submit" type="submit" id="btnVenta" style="background:#9b59b6">Registrar venta</button>
     </form>
 
@@ -434,6 +439,20 @@
         btnSend.textContent = "Enviar entradas";
       }
     });
+
+    function calcularTotal() {
+      const ce = parseInt(document.getElementById("cantEntradas").value) || 0;
+      const pe = parseInt(document.getElementById("precioEntrada").value) || 0;
+      const cp = parseInt(document.getElementById("cantParqueos").value) || 0;
+      const pp = parseInt(document.getElementById("precioParqueo").value) || 0;
+      const total = (ce * pe) + (cp * pp);
+      document.getElementById("totalVenta").textContent = "₡" + total.toLocaleString();
+    }
+
+    document.getElementById("cantEntradas").addEventListener("input", calcularTotal);
+    document.getElementById("precioEntrada").addEventListener("input", calcularTotal);
+    document.getElementById("cantParqueos").addEventListener("input", calcularTotal);
+    document.getElementById("precioParqueo").addEventListener("input", calcularTotal);
 
     ventaForm.addEventListener("submit", async (e) => {
       e.preventDefault();
