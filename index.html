@@ -276,6 +276,43 @@
     <div class="message message--success" id="msgCourtesySuccess"></div>
     <div class="message message--error" id="msgCourtesyError">Error al enviar cortesia. Intenta de nuevo.</div>
 
+    <div style="position:relative;margin:28px 0 24px;text-align:center">
+      <hr class="panel__divider" style="margin:0">
+      <span style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:#2a2a2a;padding:0 12px;font-size:0.7rem;color:#777;text-transform:uppercase;letter-spacing:1px;white-space:nowrap">Venta en evento</span>
+    </div>
+
+    <form id="ventaForm">
+      <div class="form-group">
+        <label class="form-group__label" for="nombreVenta">Nombre del comprador</label>
+        <input class="form-group__input" type="text" id="nombreVenta" name="nombre" placeholder="Nombre completo" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-group__label" for="cantEntradas">Cantidad de entradas</label>
+        <input class="form-group__input" type="number" id="cantEntradas" name="cant_entradas" min="1" max="20" value="1" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-group__label" for="precioEntrada">Precio por entrada (colones)</label>
+        <input class="form-group__input" type="number" id="precioEntrada" name="precio_entrada" min="0" value="5000" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-group__label" for="cantParqueos">Cantidad de parqueos</label>
+        <input class="form-group__input" type="number" id="cantParqueos" name="cant_parqueos" min="0" max="20" value="0">
+      </div>
+
+      <div class="form-group">
+        <label class="form-group__label" for="precioParqueo">Precio por parqueo (colones)</label>
+        <input class="form-group__input" type="number" id="precioParqueo" name="precio_parqueo" min="0" value="2000">
+      </div>
+
+      <button class="btn-submit" type="submit" id="btnVenta" style="background:#9b59b6">Registrar venta</button>
+    </form>
+
+    <div class="message message--success" id="msgVentaSuccess"></div>
+    <div class="message message--error" id="msgVentaError">Error al registrar venta. Intenta de nuevo.</div>
+
     <p class="panel__footer">Autocross en Accion CR &mdash; Sistema de entradas</p>
     <p class="panel__footer" style="margin-top:8px"><a href="https://thinkler.ai" target="_blank" style="font-size:inherit;text-decoration:none;letter-spacing:0.5px;color:#888">Powered by <span style="color:#1e566f;font-weight:bold">Think</span><span style="color:#41a2a8;font-weight:bold">ler</span><span style="color:#41a2a8">.ai</span></a></p>
   </div>
@@ -284,6 +321,7 @@
     const WEBHOOK_URL = "https://n8n-n8n.heyett.easypanel.host/webhook/autocross-confirmacion";
     const COURTESY_URL = "https://n8n-n8n.heyett.easypanel.host/webhook/autocross-cortesia";
     const SEND_URL = "https://n8n-n8n.heyett.easypanel.host/webhook/autocross-enviar-entrada";
+    const VENTA_URL = "https://n8n-n8n.heyett.easypanel.host/webhook/autocross-venta-evento";
     const AUTH_KEY = "-VgakyEBGTS4ltW8I517TCWLSSMlcpPhQTmwEMD7alE";
 
     const form = document.getElementById("confirmForm");
@@ -301,6 +339,11 @@
     const msgCourtesySuccess = document.getElementById("msgCourtesySuccess");
     const msgCourtesyError = document.getElementById("msgCourtesyError");
 
+    const ventaForm = document.getElementById("ventaForm");
+    const btnVenta = document.getElementById("btnVenta");
+    const msgVentaSuccess = document.getElementById("msgVentaSuccess");
+    const msgVentaError = document.getElementById("msgVentaError");
+
     function hideMessages() {
       msgSuccess.classList.remove("message--visible");
       msgError.classList.remove("message--visible");
@@ -308,6 +351,8 @@
       msgSendError.classList.remove("message--visible");
       msgCourtesySuccess.classList.remove("message--visible");
       msgCourtesyError.classList.remove("message--visible");
+      msgVentaSuccess.classList.remove("message--visible");
+      msgVentaError.classList.remove("message--visible");
     }
 
     form.addEventListener("submit", async (e) => {
@@ -387,6 +432,49 @@
       } finally {
         btnSend.disabled = false;
         btnSend.textContent = "Enviar entradas";
+      }
+    });
+
+    ventaForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      hideMessages();
+
+      const nombre = document.getElementById("nombreVenta").value.trim();
+      const cant_entradas = document.getElementById("cantEntradas").value;
+      const precio_entrada = document.getElementById("precioEntrada").value;
+      const cant_parqueos = document.getElementById("cantParqueos").value;
+      const precio_parqueo = document.getElementById("precioParqueo").value;
+
+      if (!nombre || !cant_entradas) return;
+
+      btnVenta.disabled = true;
+      btnVenta.textContent = "Registrando...";
+
+      try {
+        const res = await fetch(VENTA_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Auth-Key": AUTH_KEY
+          },
+          body: JSON.stringify({ nombre, cant_entradas, precio_entrada, cant_parqueos, precio_parqueo })
+        });
+
+        if (res.ok) {
+          const total = (cant_entradas * precio_entrada) + (cant_parqueos * precio_parqueo);
+          msgVentaSuccess.textContent = `Venta registrada: ${cant_entradas} entrada(s)${cant_parqueos > 0 ? ' + ' + cant_parqueos + ' parqueo(s)' : ''} — Total: ₡${total.toLocaleString()}`;
+          msgVentaSuccess.classList.add("message--visible");
+          ventaForm.reset();
+          document.getElementById("precioEntrada").value = "5000";
+          document.getElementById("precioParqueo").value = "2000";
+        } else {
+          throw new Error("Response not ok");
+        }
+      } catch (err) {
+        msgVentaError.classList.add("message--visible");
+      } finally {
+        btnVenta.disabled = false;
+        btnVenta.textContent = "Registrar venta";
       }
     });
 
