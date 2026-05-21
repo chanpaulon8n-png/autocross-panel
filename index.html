@@ -178,6 +178,21 @@
   <div class="panel">
     <img src="logo-negro.png" alt="Autocross en Accion" class="panel__logo">
 
+    <div id="loginGate">
+      <h1 class="panel__title">Acceso restringido</h1>
+      <p class="panel__subtitle">Ingresa la clave para usar el panel</p>
+      <hr class="panel__divider">
+      <form id="loginForm">
+        <div class="form-group">
+          <label class="form-group__label" for="loginKey">Clave de acceso</label>
+          <input class="form-group__input" type="password" id="loginKey" placeholder="Clave del organizador" required autocomplete="current-password">
+        </div>
+        <button class="btn-submit" type="submit">Entrar</button>
+      </form>
+      <div class="message message--error" id="msgLoginError">Clave incorrecta.</div>
+    </div>
+
+    <div id="panelContent" style="display:none">
     <h1 class="panel__title">Panel de confirmacion</h1>
     <p class="panel__subtitle">Primera Fecha Autocross Nacional — 17 mayo 2026</p>
 
@@ -310,6 +325,7 @@
 
     <p class="panel__footer">Autocross en Accion CR &mdash; Sistema de entradas</p>
     <p class="panel__footer" style="margin-top:8px"><a href="https://thinkler.ai" target="_blank" style="font-size:inherit;text-decoration:none;letter-spacing:0.5px;color:#888">Powered by <span style="color:#1e566f;font-weight:bold">Think</span><span style="color:#41a2a8;font-weight:bold">ler</span><span style="color:#41a2a8">.ai</span></a></p>
+    </div>
   </div>
 
   <script>
@@ -317,7 +333,58 @@
     const COURTESY_URL = "https://n8n-n8n.heyett.easypanel.host/webhook/autocross-cortesia";
     const SEND_URL = "https://n8n-n8n.heyett.easypanel.host/webhook/autocross-enviar-entrada";
     const VENTA_URL = "https://n8n-n8n.heyett.easypanel.host/webhook/autocross-venta-evento";
-    const AUTH_KEY = "-VgakyEBGTS4ltW8I517TCWLSSMlcpPhQTmwEMD7alE";
+
+    // --- Acceso ---
+    function getKey() { return sessionStorage.getItem("autocross_key") || ""; }
+
+    const loginGate = document.getElementById("loginGate");
+    const panelContent = document.getElementById("panelContent");
+    const loginForm = document.getElementById("loginForm");
+    const msgLoginError = document.getElementById("msgLoginError");
+
+    function showPanel() {
+      loginGate.style.display = "none";
+      panelContent.style.display = "block";
+    }
+
+    function logout(reason) {
+      sessionStorage.removeItem("autocross_key");
+      panelContent.style.display = "none";
+      loginGate.style.display = "block";
+      if (reason) {
+        msgLoginError.textContent = reason;
+        msgLoginError.classList.add("message--visible");
+      }
+    }
+
+    if (getKey()) showPanel();
+
+    loginForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      msgLoginError.classList.remove("message--visible");
+      const key = document.getElementById("loginKey").value.trim();
+      if (!key) return;
+      sessionStorage.setItem("autocross_key", key);
+      document.getElementById("loginKey").value = "";
+      showPanel();
+    });
+
+    // Llama a un webhook protegido; si la clave es invalida, vuelve al login.
+    async function authFetch(url, payload) {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Auth-Key": getKey()
+        },
+        body: JSON.stringify(payload)
+      });
+      if (res.status === 401 || res.status === 403) {
+        logout("Clave incorrecta. Volve a ingresar.");
+        throw new Error("auth");
+      }
+      return res;
+    }
 
     const form = document.getElementById("confirmForm");
     const btnSubmit = document.getElementById("btnSubmit");
@@ -363,16 +430,9 @@
       btnSubmit.textContent = "Procesando...";
 
       try {
-        const res = await fetch(WEBHOOK_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Auth-Key": AUTH_KEY
-          },
-          body: JSON.stringify({
-            correo_comprador: correo,
-            accion: accion
-          })
+        const res = await authFetch(WEBHOOK_URL, {
+          correo_comprador: correo,
+          accion: accion
         });
 
         if (res.ok) {
@@ -406,14 +466,7 @@
       btnSend.textContent = "Enviando...";
 
       try {
-        const res = await fetch(SEND_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Auth-Key": AUTH_KEY
-          },
-          body: JSON.stringify({ correo, nombre, cantidad })
-        });
+        const res = await authFetch(SEND_URL, { correo, nombre, cantidad });
 
         if (res.ok) {
           msgSendSuccess.textContent = "Entrada enviada al correo del comprador.";
@@ -457,14 +510,7 @@
       btnVenta.textContent = "Registrando...";
 
       try {
-        const res = await fetch(VENTA_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Auth-Key": AUTH_KEY
-          },
-          body: JSON.stringify({ nombre, cant_entradas, precio_entrada: PRECIO_ENTRADA, cant_parqueos, precio_parqueo: PRECIO_PARQUEO })
-        });
+        const res = await authFetch(VENTA_URL, { nombre, cant_entradas, precio_entrada: PRECIO_ENTRADA, cant_parqueos, precio_parqueo: PRECIO_PARQUEO });
 
         if (res.ok) {
           const total = (cant_entradas * PRECIO_ENTRADA) + (cant_parqueos * PRECIO_PARQUEO);
@@ -496,14 +542,7 @@
       btnCourtesy.textContent = "Enviando...";
 
       try {
-        const res = await fetch(COURTESY_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Auth-Key": AUTH_KEY
-          },
-          body: JSON.stringify({ correo, cantidad })
-        });
+        const res = await authFetch(COURTESY_URL, { correo, cantidad });
 
         if (res.ok) {
           msgCourtesySuccess.textContent = "Entrada de cortesia enviada al correo indicado.";
