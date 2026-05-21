@@ -510,7 +510,7 @@
       btnVenta.textContent = "Registrando...";
 
       try {
-        const res = await authFetch(VENTA_URL, { nombre, cant_entradas, precio_entrada: PRECIO_ENTRADA, cant_parqueos, precio_parqueo: PRECIO_PARQUEO });
+        const res = await authFetch(VENTA_URL, { nombre, cant_entradas, cant_parqueos });
 
         if (res.ok) {
           const total = (cant_entradas * PRECIO_ENTRADA) + (cant_parqueos * PRECIO_PARQUEO);
