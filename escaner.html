@@ -246,6 +246,16 @@
 
     const COOLDOWN_MS = 5000;
     const ALLOWED_HOST = 'n8n-n8n.heyett.easypanel.host';
+    const MARCAR_URL = 'https://n8n-n8n.heyett.easypanel.host/webhook/autocross-marcar-usado';
+
+    const STATUS_INFO = {
+      valid:         { type: 'valid',   title: 'ENTRADA VALIDA', msg: 'Permitir ingreso' },
+      already_used:  { type: 'invalid', title: 'YA FUE USADA',   msg: 'Esta entrada ya fue escaneada' },
+      not_found:     { type: 'invalid', title: 'NO ENCONTRADA',  msg: 'Esta entrada no existe en el sistema' },
+      pending:       { type: 'warning', title: 'PAGO PENDIENTE', msg: 'Esta entrada aun no fue confirmada' },
+      rejected:      { type: 'invalid', title: 'RECHAZADA',      msg: 'Esta entrada fue rechazada' },
+      invalid_token: { type: 'invalid', title: 'QR INVALIDO',    msg: 'Este codigo QR no es autentico' }
+    };
 
     function escapeText(str) {
       const div = document.createElement('div');
@@ -299,49 +309,38 @@
       lastScannedCode = decodedText;
       lastScanTime = now;
 
+      let id, token;
       try {
         const qrUrl = new URL(decodedText);
         if (qrUrl.hostname !== ALLOWED_HOST || qrUrl.pathname !== '/webhook/autocross-verificar') {
           showResult('invalid', 'QR NO VALIDO', 'Este QR no es una entrada de Autocross', {});
+          setTimeout(() => { isProcessing = false; }, COOLDOWN_MS);
           return;
         }
+        id = qrUrl.searchParams.get('id');
+        token = qrUrl.searchParams.get('token');
       } catch {
         showResult('invalid', 'QR NO VALIDO', 'Este QR no es una entrada de Autocross', {});
+        setTimeout(() => { isProcessing = false; }, COOLDOWN_MS);
         return;
       }
 
       document.getElementById('status').textContent = 'Verificando...';
 
       try {
-        const res = await fetch(decodedText);
-        const html = await res.text();
-
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
-        const title = doc.querySelector('h1');
-        const msg = doc.querySelectorAll('p')[0];
-        const details = doc.querySelectorAll('p');
-
-        const titleText = title ? title.textContent : 'RESPUESTA';
-        const msgText = msg ? msg.textContent : '';
-
-        let nombre = '';
-        let entradaId = '';
-        let cantidad = '';
-        const strongTags = doc.querySelectorAll('strong');
-        strongTags.forEach(tag => {
-          const text = tag.textContent;
-          const next = tag.nextSibling;
-          if (text === 'Nombre:' && next) nombre = next.textContent.trim();
-          if (text === 'ID:' && next) entradaId = next.textContent.trim();
-          if (text === 'Entradas:' && next) cantidad = next.textContent.trim();
+        const res = await fetch(MARCAR_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, token })
         });
+        const data = await res.json();
+        const info = STATUS_INFO[data.status] || { type: 'invalid', title: 'ERROR', msg: 'Respuesta no reconocida' };
 
-        let type = 'invalid';
-        if (titleText.includes('VALIDA')) type = 'valid';
-        else if (titleText.includes('PENDIENTE')) type = 'warning';
-
-        showResult(type, titleText, msgText, { nombre, entradaId, cantidad });
+        showResult(info.type, info.title, info.msg, {
+          nombre: data.nombre || '',
+          entradaId: data.id_entrada || '',
+          cantidad: data.cantidad || ''
+        });
 
       } catch (err) {
         showResult('invalid', 'ERROR', 'No se pudo verificar la entrada', {});
